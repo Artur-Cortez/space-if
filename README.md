@@ -6,9 +6,7 @@
 
 ##  How to play
 
-I will finish this when the game is done, it's just Space Invaders after all.
-
-The game has four levels (in reference to the four course periods) and bruh.
+I will finish this when the game is done, it's just Space Invaders after all.<br>The game has four levels (in reference to the four course periods) and bruh.
 
 ## License
 This project has the license to be radical.
