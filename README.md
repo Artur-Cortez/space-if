@@ -12,8 +12,6 @@ The game has four levels (in reference to the four course periods) and bruh.
 ## License
 This project has the license to be radical.
 
----
-
 ### Special thanks to:
 
 - [Leonardo Ataíde Minora](https://github.com/leonardo-minora/)
@@ -24,13 +22,11 @@ This project has the license to be radical.
 - **Ednaldo Pereira**
 - **Manoel Gomes**
 
+
 ## Contacts
 
-<img src="gitimages/discord.png" alt="discord" width="64px">
-
+<a href="https://cutt.ly/x9UefiY" target="_blank"><img src="gitimages/discord.png" alt="Discord" width=64></a>
 &nbsp;
-
-<img src="gitimages/email.png" alt="discord" width="64px">
-
+<a href="mailto:souza.cortez.013@gmail.com" target="_blank"><img src="gitimages/email.png" alt="Email" width=64></a>
 &nbsp;
 
