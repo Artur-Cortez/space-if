@@ -1,5 +1,5 @@
 
-# Space IF
+# Space IF :space_invader:
 
 **Space If** is a game made by me and my friend, Tod, for our end-of-course project of logic and algorithms fundamentals based on Space Invaders using python's library [pygame](https://www.pygame.org/). Feel free to make your own changes!
 
@@ -25,4 +25,12 @@ This project has the license to be radical.
 - **Manoel Gomes**
 
 ## Contacts
-![enter image description here](C:%5CUsers%5CPichau%5CDesktop%5Cdiscord.png)
+
+<img src="gitimages/discord.png" alt="discord" width="64px">
+
+&nbsp;
+
+<img src="gitimages/email.png" alt="discord" width="64px">
+
+&nbsp;
+
