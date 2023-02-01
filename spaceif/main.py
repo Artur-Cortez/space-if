@@ -1,70 +1,93 @@
-import pygame, random, spritesheet, sys
+import pygame, random, spritesheet, sys, os
 from pygame import mixer
 from button import Botao
 from pygame.locals import *
 import time #
+from SaveLoadManager import SaveLoadSystem
 pygame.init()
 
 #inicializacao do módulo de som
 pygame.mixer.pre_init(44100, -16, 2, 512)
 
 #definir fontes e score, por preguiça está aqui
-valorscore = 0
+# valorscore = 0
 valorscoreX = 5
 valorscoreY = 5
+global level
+global iniciou
+global terminou_contagem
+terminou_contagem = False
 
+pausado = False
 #funcao para o main menu
 def get_font(size):
     return pygame.font.Font("assets/font/font.ttf", size)
 
 #background da fase msm, por enquanto aqui
-background = pygame.image.load('assets/img/espacolindo.png')
+
+background = pygame.image.load('assets/img/fundo1.png')
+# background = pygame.image.load('assets/img/espacolindo.png')
+background = pygame.transform.smoothscale(background, (635, 635))
 
 #a ajeitar essa largura e altura da tela
 LARGURA = background.get_width()
 ALTURA = background.get_height()
 
 pygame.display.set_caption('Spaceif')
+click = pygame.mixer.Sound('assets/sound/click.wav')
+click.set_volume(0.5)
+
+somgameover = pygame.mixer.Sound('assets/sound/gameover.mp3')
+somgameover.set_volume(0.8)
+
+win = pygame.mixer.Sound('assets/sound/win.mp3')
+win.set_volume(0.8)
+
+saveloadmanager = SaveLoadSystem(".save", "save_data")
+
+level, pontuacoes = saveloadmanager.load_game_data(["level", "pontuacoes"], [1, []])
 
 def desenhar_texto(texto, font, text_color, x, y, tela):
     img = font.render(texto, True, text_color)
     rect = img.get_rect(center=(x,y))
     tela.blit(img, rect)
+    
+def desenhar_fundo(tela, imagem_de_fundo):
+    tela.fill((0, 0, 0))
+    global retangulo_imagem
+    retangulo_imagem = imagem_de_fundo.get_rect(center=(tela.get_width()/2, tela.get_height()/2))
+    tela.blit(imagem_de_fundo, retangulo_imagem)
+    return retangulo_imagem
 
 def main_menu():
   #background do menu
-  bg = pygame.image.load('assets/img/menu.png')
+  bg = pygame.image.load('assets/img/menualt.png')
 
-  screen = pygame.display.set_mode((600, 600), RESIZABLE)
+  screen = pygame.display.set_mode((635, 635), RESIZABLE)
+  icon = pygame.image.load('assets/img/pythoniconpng.png')
+  # a = pygame.transform.scale(icon, (32, 32))
+  pygame.display.set_icon(icon)
 
   bp = pygame.font.Font('assets/font/BPimperialItalic.otf', 170)
 
   relogio = pygame.time.Clock()
 
   musica_menu = pygame.mixer.Sound('assets/sound/musica_menu.mp3')
-  musica_menu.set_volume(0.25)
+  musica_menu.set_volume(0.6)
   musica_menu.play(loops= -1)
 
-  click = pygame.mixer.Sound('assets/sound/click.wav')
-  click.set_volume(0.5)
 
   zoom = pygame.mixer.Sound('assets/sound/zoom.wav')
   zoom.set_volume(0.25)
   
   global musica
-  musica = pygame.mixer.Sound('assets/sound/musicafases.wav')
-  musica.set_volume(0.1)
-
-  def desenhar_fundo():
-    screen.fill((0, 0, 0))
-    global bg_rect
-    bg_rect = bg.get_rect(center=(screen.get_width()/2, screen.get_height()/2))
-    screen.blit(bg, bg_rect)
-    
+  musica = pygame.mixer.Sound('assets/sound/musicafases.mp3')
+  musica.set_volume(1)    
 
   while True:
+    
     relogio.tick(60)
-    desenhar_fundo()
+    bg_rect = desenhar_fundo(screen, bg)
     MENU_MOUSE_POS = pygame.mouse.get_pos()
 
     # spaceif = bp.render('SPACEIF', True, '#5e17fb')
@@ -96,14 +119,18 @@ def main_menu():
         if QUIT_BUTTON.checkForInput(MENU_MOUSE_POS):
             click.play()
             time.sleep(0.5)
+            saveloadmanager.save_game_data([level], ["level"])
             pygame.quit()
 
     pygame.display.update()
     pygame.display.flip()
   
 def play():
-  screen = pygame.display.set_mode((600, 600), pygame.RESIZABLE)
-
+  global valorscore
+  valorscore = 0
+  screen = pygame.display.set_mode((635, 635), pygame.RESIZABLE)
+  
+  global pausado
   screen.fill("black")
 
   #cores
@@ -114,17 +141,22 @@ def play():
   #configs para a quantia de pyhtonaliens
   linha = 4
   coluna = 5
+  # valorscore = 0
 
-  level = 1
   ultimo_tiro_alien = pygame.time.get_ticks()
-  alien_cooldown = 1000
-  countdown = 3
+  
   ultima_contagem = pygame.time.get_ticks()
   global game_over
   game_over = 0 #0 é game over, 1 o player ganhou, -1 o player perdeu
 
+  #configs de dificuldade
   #o quanto de x que os aliens descem a cada movimentação
   aliens_desce = 10
+  cooldown = 700
+  alien_cooldown = 1000
+  len_tiro_alien = 5
+
+  countdown = 3
 
   relogio = pygame.time.Clock()
 
@@ -133,22 +165,21 @@ def play():
   #carregar sons
   # woom = pygame.mixer.Sound('assets/sound/sweep.wav')
   # woom.set_volume(0.25)
-  # global canal_explo
-  # canal_explo = pygame.mixer.Channel(1)
+ 
   som_explosao = pygame.mixer.Sound('assets/sound/explosion.wav')
-  som_explosao.set_volume(0.2)
+  som_explosao.set_volume(1)
 
   laser = pygame.mixer.Sound('assets/sound/laser.wav')
-  laser.set_volume(0.2)  
-  
-  def desenhar_fundo():
-    screen.blit(background, (0, 0))
+  laser.set_volume(1)  
 
   #definir criar texto
-  def mostrarscore(x, y):
+  def mostrarcoisas(tela):
     score = font.render("Score: " + str(valorscore),
                           True, (BRANCO))
-    screen.blit(score, (x , y ))
+    tela.blit(score, (screen.get_width() - (screen.get_width()-5), (screen.get_height() - (screen.get_height()-5))))
+
+    nivel = font.render("Nivel " + str(level), True, (BRANCO))
+    tela.blit(nivel, (screen.get_width() - 70, 5)) 
 
   #cria classe da nave
   class Nave(pygame.sprite.Sprite):
@@ -165,8 +196,7 @@ def play():
     def update(self):
       #definir velocidade de movimento
       velocidade = 8
-      #delay p atirar em milisegundos
-      cooldown = 500
+      
       game_over = 0
       #procurar por teclas pressionadas
       key = pygame.key.get_pressed()
@@ -241,7 +271,7 @@ def play():
       self.contador_de_movimentos += 1
       if abs(self.contador_de_movimentos) > 75:
         #faz os aliens descerem
-        self.rect.y += 20
+        self.rect.y += aliens_desce
         self.direcao_movimento *= -1
         self.contador_de_movimentos *= self.direcao_movimento        
       
@@ -301,14 +331,15 @@ def play():
   grupo_tiro_alien = pygame.sprite.Group()
   grupo_explosao = pygame.sprite.Group()
 
+  
   #cria alien
   def criar_aliens():
     #gerar aliens
     for linha in range(4):
-      for item in range(coluna):
+      for item in range(coluna): #5
         alien = Pythonaliens(100 + item * 100, 70 + linha * 70)
         grupo_alien.add(alien)  
-
+  
   criar_aliens()
 
   #cria player
@@ -317,9 +348,30 @@ def play():
 
   run = True
   while run:
+    global terminou_contagem
 
     relogio.tick(60)
-    desenhar_fundo()
+    desenhar_fundo(screen, background)    
+
+    global bonus
+    bonus = nave.vida_restante
+
+    if level == 2:     
+      
+      aliens_desce = 12.5      
+      alien_cooldown = 900
+      len_tiro_alien = 6
+    if level == 3:
+     
+
+      aliens_desce = 15      
+      alien_cooldown = 700
+      len_tiro_alien = 7
+    if level == 4:   
+      
+      aliens_desce = 17.5      
+      alien_cooldown = 500
+      len_tiro_alien = 8
 
     if countdown == 0:
       
@@ -328,7 +380,7 @@ def play():
       #gravar tempo atual
       tempo_atual = pygame.time.get_ticks()
       #atirar
-      if tempo_atual - ultimo_tiro_alien > alien_cooldown and len(grupo_tiro_alien) < 5 and len(grupo_alien) > 0:
+      if tempo_atual - ultimo_tiro_alien > alien_cooldown and len(grupo_tiro_alien) < len_tiro_alien and len(grupo_alien) > 0:
         alien_atirador = random.choice(grupo_alien.sprites())
         tiro_alien = Tiroalien((alien_atirador.rect.centerx), (alien_atirador.rect.bottom))
         grupo_tiro_alien.add(tiro_alien)
@@ -337,8 +389,17 @@ def play():
       
       #verifica se todos os aliens de uma fase morreram
       if len(grupo_alien) == 0:
+        #vitoria
+        pontuacoes.append((valorscore * nave.vida_restante))
+        saveloadmanager.save_game_data([pontuacoes], ["pontuacoes"])
         game_over = 1
+      
+      if level == 4 and len(grupo_alien) == 0:
+        time.sleep(0.7)
+        terminou_contagem = True
+        final()
 
+        #se o jogo é para estar rodando
       if game_over == 0:
         
         #updeita a nave
@@ -350,8 +411,8 @@ def play():
         grupo_tiro_alien.update()
       
       else:
-        time.sleep(0.4)
-        fim_de_jogo()
+        time.sleep(0.9)
+        fim_de_fase()
 
     if countdown > 0:
       desenhar_texto('Prepare-se', get_font(40), 'white', int(screen.get_width() / 2), int(screen.get_height() / 2 + 100), screen)
@@ -371,54 +432,278 @@ def play():
     grupo_alien.draw(screen)
     grupo_tiro_alien.draw(screen)
     grupo_explosao.draw(screen)
+
+   
     
     #mostrar score
-    mostrarscore(valorscoreX, valorscoreY)
+    mostrarcoisas(screen)
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
+            saveloadmanager.save_game_data([level], ["level"])
             sys.exit()
     
     key = pygame.key.get_pressed()
+    if key[pygame.K_m]:
+      grupo_alien = []
+    if key[pygame.K_i]:
+      minora()
     if key[pygame.K_l]:
       game_over = 1
     if key[pygame.K_f]:
-      game_over = -1    
+      game_over = -1
+    if key[pygame.K_p] or key[pygame.K_ESCAPE]:
+      pausado = True
+      time.sleep(0.4)
+      pause()
 
     pygame.display.update()
 
 def options():
   pass
 
-def fim_de_jogo():
-  
-  screen = pygame.display.set_mode((600, 600))
+def unpause():
+  global pausado
+  pausado = False
+
+def unlevel():
+  global level
+  level = 1
+def pause():
+  screen = pygame.display.set_mode((635, 635))
   musica.stop()
+
+  pause = pygame.image.load('assets/img/quadradoroxo.png')
+
   
-  def desenhar_fundo():
-    screen.fill((0, 0, 0))
-    global background_rect
-    background_rect = background.get_rect(center=(screen.get_width()/2, screen.get_height()/2))
-    screen.blit(background, background_rect)
+  while pausado:
+    bg_rect = desenhar_fundo(screen, background)
+    pause.set_alpha(209)
+    screen.blit(pause, bg_rect)
 
-  run = True
-  while run:
-    desenhar_fundo()
-    if game_over == -1:
-      desenhar_texto('Game Over!', get_font(40), 'white', int(screen.get_width() / 2), int(screen.get_height() / 2 - 60), screen)
+    desenhar_texto("PAUSED", get_font(45), "#8c52ff", bg_rect.centerx, (bg_rect.centery - 125), screen)
     
-    if game_over == 1:
-      desenhar_texto('Voce venceu!', get_font(40), 'white', int(screen.get_width() / 2), int(screen.get_height() / 2 - 60), screen)
-    
-    RESTART = Botao(background_rect.centerx, background_rect.centery + 50, 'RESTART', get_font(30), 'white', "#8c52ff", image=None)
-    NEXT_LEVEL = Botao(background_rect.centerx, background_rect.centery + 50, 'N', get_font(30), 'white', "#8c52ff", image=None)
+    MENU_MOUSE_POS = pygame.mouse.get_pos()
+    PLAY_BUTTON = Botao(bg_rect.centerx, bg_rect.centery - 50, "PLAY", get_font(30), "White", "#8c52ff", image=None)
+    RESTART_BUTTON = Botao(bg_rect.centerx, bg_rect.centery, "RESTART", get_font(30), "White", "#8c52ff", image=None)
+    HELP = Botao(bg_rect.centerx, bg_rect.centery + 50, "HELP", get_font(30), "White", "#8c52ff", image=None)
+    QUIT_BUTTON = Botao(bg_rect.centerx, bg_rect.centery + 100, "QUIT", get_font(30), "White", "#8c52ff", image=None)
 
+    for button in [PLAY_BUTTON, RESTART_BUTTON, HELP, QUIT_BUTTON]:
+      button.changeColor(MENU_MOUSE_POS, screen)
+      button.update(screen)
 
     for event in pygame.event.get():
       if event.type == pygame.QUIT:
           pygame.quit()
+      if event.type == VIDEORESIZE:
+        screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+      if event.type == pygame.MOUSEBUTTONDOWN:
+        if PLAY_BUTTON.checkForInput(MENU_MOUSE_POS):
+            click.play()
+            time.sleep(0.5)
+            unpause()
+        if RESTART_BUTTON.checkForInput(MENU_MOUSE_POS):           
+            click.play()
+            play()
+        if HELP.checkForInput(MENU_MOUSE_POS):
+            click.play()
+            help()
+        if QUIT_BUTTON.checkForInput(MENU_MOUSE_POS):
+            click.play()
+            time.sleep(0.5)
+            saveloadmanager.save_game_data([level], ["level"])
+            main_menu()
+    
+    if pausado:
+      key = pygame.key.get_pressed()
+      if key[pygame.K_SPACE] or key[pygame.K_p] or key[pygame.K_ESCAPE]:
+        time.sleep(0.3)
+        unpause()
 
+    pygame.display.update()
+    pygame.display.flip()
+
+def help():
+  pass
+
+def fim_de_fase():
+  quadradoroxo = pygame.image.load('assets/img/quadradoroxo.png')
+  
+  if game_over == -1:
+    pygame.mixer.Channel(3).play(somgameover)
+  elif game_over == 1:
+    pygame.mixer.Channel(3).play(win)
+  screen = pygame.display.set_mode((635, 635))
+  musica.stop()
+
+  img_next_level = pygame.image.load('assets/img/botao_branco.png')
+  img_next_level = pygame.transform.scale(img_next_level, (105, 40))
+
+  backto = pygame.image.load('assets/img/back2.png')
+  backto = pygame.transform.scale(backto, (96, 90))
+
+  run = True
+  while run:
+    
+    background_rect = desenhar_fundo(screen, background)
+    #valor original 87
+    quadradoroxo.set_alpha(157)
+    screen.blit(quadradoroxo, (background_rect))
+
+    MENU_MOUSE_POS = pygame.mouse.get_pos()
+
+    RESTART = Botao(background_rect.centerx, background_rect.centery + 100, 'RESTART', get_font(35), 'white', "#8c52ff", image=None)
+    BACKTO = Botao(background_rect.centerx, background_rect.bottom -70, '', get_font(35), 'white', "#8c52ff", backto)
+    NEXT_LEVEL = Botao(background_rect.centerx + 130, background_rect.centery + 120, 'NEXT LEVEL', get_font(30), 'white', "#8c52ff", image=None)
+    lista_botoes = []
+    passou_de_fase = False
+
+    #se perdeu
+    if game_over == -1:
+      desenhar_texto('Game Over!', get_font(50), '#8c52ff', int(screen.get_width() / 2), int(screen.get_height() / 2 - 170), screen)
+      desenhar_texto('Score: ' + str(valorscore), get_font(27), 'white', background_rect.centerx, background_rect.centery - 100, screen)
+      desenhar_texto('Bonus: ' + str(bonus), get_font(27), 'white', background_rect.centerx, background_rect.centery - 65, screen)
+      pygame.draw.line(screen, 'white', (background_rect.centerx -90, background_rect.centery - 50), (background_rect.centerx + 90, background_rect.centery - 50), 4)
+      desenhar_texto('Total: ' + str(bonus * valorscore), get_font(27), '#e9a44c', background_rect.centerx, background_rect.centery - 20, screen)
+
+      lista_botoes.extend([RESTART, BACKTO])
+
+    #se venceu
+    if game_over == 1:
+      desenhar_texto('Voce venceu!', get_font(50), '#8c52ff', int(screen.get_width() / 2), int(screen.get_height() / 2 - 170), screen)
+
+      desenhar_texto('Score: ' + str(valorscore), get_font(27), 'white', background_rect.centerx, background_rect.centery - 80, screen)
+      desenhar_texto('Bonus: ' + str(bonus), get_font(27), 'white', background_rect.centerx, background_rect.centery - 45, screen)
+      pygame.draw.line(screen, 'white', (background_rect.centerx -90, background_rect.centery - 30), (background_rect.centerx + 90, background_rect.centery - 30), 4)
+      desenhar_texto('Total: ' + str(bonus * valorscore), get_font(27), '#e9a44c', background_rect.centerx, background_rect.centery, screen)
+      
+
+      RESTART = Botao(background_rect.centerx - 130, background_rect.centery + 120, 'RESTART', get_font(30), 'white', "#8c52ff", image=None)
+      lista_botoes.extend([RESTART, BACKTO, NEXT_LEVEL])
+      passou_de_fase = True
+
+    for button in lista_botoes:
+      button.changeColor(MENU_MOUSE_POS, screen)
+      button.update(screen)
+
+    for event in pygame.event.get():
+      if event.type == pygame.QUIT:
+          pygame.quit()
+      if event.type == pygame.MOUSEBUTTONDOWN:
+        if lista_botoes[0].checkForInput(MENU_MOUSE_POS):
+            click.play()
+            time.sleep(0.5)
+            play()
+        if lista_botoes[1].checkForInput(MENU_MOUSE_POS):
+            click.play()
+            time.sleep(0.5)
+            main_menu()
+        if passou_de_fase:
+          if lista_botoes[2].checkForInput(MENU_MOUSE_POS):
+            click.play()
+            time.sleep(0.5)
+            global level
+            level += 1
+            play()
+
+    pygame.display.update()
+    pygame.display.flip()
+
+def minora():
+  screen = pygame.display.set_mode((635, 635))
+  musica.stop()
+
+  fundo = pygame.image.load('assets/img/menu2.png')
+
+  minora = pygame.image.load('assets/img/imagemdeminora.png')
+  minora = pygame.transform.smoothscale(minora, (255, 400))
+
+  derrotou = pygame.image.load('assets/img/vocederrotou.png')
+  derrotou = pygame.transform.smoothscale(derrotou, (441, 90))
+
+  amigos = pygame.image.load('assets/img/amigos.png')
+  amigos = pygame.transform.smoothscale(amigos, (426, 100))
+
+  backto = pygame.image.load('assets/img/back2.png')
+  backto = pygame.transform.scale(backto, (188, 175))
+
+
+  run = True
+  while run:
+    MENU_MOUSE_POS = pygame.mouse.get_pos()
+   
+    background_rect = desenhar_fundo(screen, fundo)
+    screen.blit(minora, (0, (screen.get_height() - minora.get_height())))
+    desenhar_texto('FINAL BOM', get_font(50), '#8c52ff', background_rect.centerx, background_rect.top + 50, screen)
+    
+    screen.blit(derrotou, (background_rect.centerx - 220, background_rect.top + 100))
+
+    screen.blit(amigos, (background_rect.centerx - 120, background_rect.centery - 100))
+
+    BACKTOMAIN = Botao(background_rect.centerx + 120, background_rect.bottom - 135, '', get_font(30), '#a51f62', "#8c52ff", backto)
+    BACKTOMAIN.changeColor(MENU_MOUSE_POS, screen)
+    BACKTOMAIN.update(screen)
+
+    for event in pygame.event.get():
+      if event.type == pygame.QUIT:
+          pygame.quit()
+      if event.type == pygame.MOUSEBUTTONDOWN:
+        if BACKTOMAIN.checkForInput(MENU_MOUSE_POS):
+            click.play()
+            # untermina_contagem()
+            unlevel()
+            time.sleep(0.5)
+            main_menu()
+  
+    
+    
+    pygame.display.update()
+    pygame.display.flip()
+
+def final():
+  quadradoroxo = pygame.image.load('assets/img/quadradoroxo.png')
+  quadradoroxo.set_alpha(157)
+
+  screen = pygame.display.set_mode((635, 635))
+  musica.stop()
+
+  backto = pygame.image.load('assets/img/back2.png')
+  backto = pygame.transform.scale(backto, (96, 90))
+
+  run = True
+  while run:
+    
+    background_rect = desenhar_fundo(screen, background)
+    screen.blit(quadradoroxo, (background_rect))
+
+    MENU_MOUSE_POS = pygame.mouse.get_pos()
+
+    BACKTO = Botao(background_rect.centerx, background_rect.bottom -70, '', get_font(35), 'white', "#8c52ff", backto)
+
+    desenhar_texto('FIM DE JOGO!', get_font(50), '#8c52ff', int(screen.get_width() / 2), int(screen.get_height() / 2 - 170), screen)
+    
+    if terminou_contagem:
+      desenhar_texto('Level 1: ' + str(pontuacoes[-4]), get_font(27), 'white', background_rect.centerx, background_rect.centery - 100, screen)
+      desenhar_texto('Level 2: ' + str(pontuacoes[-3]), get_font(27), 'white', background_rect.centerx, background_rect.centery - 65, screen)
+      desenhar_texto('Level 3: ' + str(pontuacoes[-2]), get_font(27), 'white', background_rect.centerx, background_rect.centery - 30, screen)
+      desenhar_texto('Level 4: ' + str(pontuacoes[-1]), get_font(27), 'white', background_rect.centerx, background_rect.centery + 5, screen)
+      pygame.draw.line(screen, 'white', (background_rect.centerx -100, background_rect.centery + 35), (background_rect.centerx + 100, background_rect.centery + 35), 4)
+      desenhar_texto('Final: ' + str(pontuacoes[-4] + pontuacoes[-3] + pontuacoes[-2] + pontuacoes[-1]), get_font(30), '#7ed957', background_rect.centerx, background_rect.centery + 70, screen)
+
+    BACKTO.changeColor(MENU_MOUSE_POS, screen)
+    BACKTO.update(screen)
+
+    for event in pygame.event.get():
+      if event.type == pygame.QUIT:
+          pygame.quit()
+      if event.type == pygame.MOUSEBUTTONDOWN:
+        if BACKTO.checkForInput(MENU_MOUSE_POS):
+            click.play()
+            time.sleep(0.5)
+            minora()
+    
     pygame.display.update()
     pygame.display.flip()
 
