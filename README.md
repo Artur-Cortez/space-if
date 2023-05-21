@@ -1,7 +1,7 @@
 
 # Space IF :space_invader:
 
-**Space If** is a game made by me and my friend, Tod, for our end-of-course project of logic and algorithms fundamentals based on Space Invaders using python's library [pygame](https://www.pygame.org/). Feel free to make your own changes!
+**Space If** is a game made by me and my friend, Tod, for our end-of-course project of logic and algorithms fundamentals based on Space Invaders using python's library [pygame](https://www.pygame.org/). Feel free to test it out!
 
 
 ##  How to play
