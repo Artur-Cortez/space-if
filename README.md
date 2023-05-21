@@ -15,12 +15,7 @@ This project has the license to be radical.
 
 - [Leonardo Ataíde Minora](https://github.com/leonardo-minora/)
 -  **Dani of Design**
--  **Flavio das bolas**
--  **Angelo Cardoso Costa**
 - **Tod**
-- **Ednaldo Pereira**
-- **Manoel Gomes**
-
 
 ## Contacts
 
