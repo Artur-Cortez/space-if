@@ -6,7 +6,7 @@
 
 ##  How to play
 
-I will finish this when the game is done, it's just Space Invaders after all.<br>The game has four levels (in reference to the four course periods) and bruh.
+Use controls WASD or arrow keys to beat the four levels (in reference to the four course periods) and each level is harder than the other.
 
 ## License
 This project has the license to be radical.
